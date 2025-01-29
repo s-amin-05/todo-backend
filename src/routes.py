@@ -1,14 +1,14 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from models import Todo
-from database import todo_collection
+
 
 router = APIRouter()
 
 # Create 
-@router.post("/todos/", status_code=201)
-async def add_todo(todo: Todo):
+@router.post("/", status_code=201)
+async def add_todo(todo: Todo, request: Request):
     try:
-        await todo_collection.insert_one(todo.model_dump())
+        request.app.todo_collection.insert_one(todo.model_dump())
         return {"todo": todo}
     except Exception as e:
         print("Insertion error:", e)
@@ -16,14 +16,16 @@ async def add_todo(todo: Todo):
 
 
 # Read
-@router.get("/todos/")
-async def get_all_todos():
+@router.get("/")
+async def get_all_todos(request: Request):
     try:
         # Removed the _id field because it was giving errors
-        todos = todo_collection.find({}, {"_id": 0})
-        todo_list = list(todos)
+        todos = []
+        cursor = request.app.todo_collection.find({}, {"_id": 0})
+        async for todo in cursor:
+            todos.append(todo)
 
-        return {"todos": todo_list}
+        return {"todos": todos}
 
     except Exception as e:
         print("Read error:", e)
@@ -31,14 +33,14 @@ async def get_all_todos():
 
 
 # Update
-@router.patch("/todos/")
-async def update_todo(old_todo_title: str, new_todo: Todo):
+@router.patch("/")
+async def update_todo(old_todo_title: str, new_todo: Todo, request: Request):
     try:
         query_filter = {"title": old_todo_title}
         update_operation = {'$set':
             new_todo.model_dump()
         }
-        result = todo_collection.update_one(query_filter, update_operation)
+        request.app.todo_collection.update_one(query_filter, update_operation)
         return {"updated_todo":new_todo}
 
     except Exception as e:
@@ -47,11 +49,11 @@ async def update_todo(old_todo_title: str, new_todo: Todo):
     
 
 # Delete
-@router.delete("/todos/")
-async def delete_todo(old_todo_title: str):
+@router.delete("/")
+async def delete_todo(old_todo_title: str, request: Request):
     try:
         query_filter = {"title": old_todo_title}
-        result = todo_collection.delete_one(query_filter)
+        result = request.app.todo_collection.delete_one(query_filter)
         return {"deleted": result.acknowledged}
 
     except Exception as e:
