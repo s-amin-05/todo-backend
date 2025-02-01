@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, Response
 from models import Todo
+from typing import Annotated
 
 
 router = APIRouter()
@@ -17,8 +18,9 @@ async def add_todo(todo: Todo, request: Request):
 
 # Read
 @router.get("/")
-async def get_all_todos(request: Request):
+async def get_all_todos(request: Request, response: Response):
     try:
+        response.set_cookie(key="ayyyy", value="yooo")
         # Removed the _id field because it was giving errors
         todos = []
         cursor = request.app.todo_collection.find({}, {"_id": 0})
